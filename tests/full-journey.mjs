@@ -22,3 +22,5 @@ else if(round.type==='hall'){await call(p,{action:'next',round:round.id},409);aw
 await call(p,{action:'next',round:round.id});console.log('PASS',round.type,round.id);
 }
 const final=await call(m);assert(final.complete);assert.equal(final.answers.length,36);assert.equal(final.reveals.length,19);console.log('PASS full journey: 19 rounds, 36 individual memories, joint responses and Hall choices persisted.');
+const ex=await (await fetch(origin+'/api/export',{headers:{Authorization:`Bearer ${p}`}})).json();assert.equal(ex.scope,'complete');assert.equal(ex.rounds.length,19);assert(ex.rounds.every(r=>r.status==='revealed'));assert.equal(ex.counts.answers,36);assert.deepEqual(ex.playlist,final.playlist);assert.equal(ex.photos.length,final.answers.filter(a=>a.photo).length);assert.equal(ex.hallOfFame.length,5);assert.equal(ex.finalMessages.length,2);assert.equal(ex.jointMemories[0].text,'O capítulo da nossa viagem');
+for(const ph of ex.photos)assert.equal((await fetch(origin+ph.download,{headers:{Authorization:`Bearer ${m}`}})).status,200);console.log('PASS full export: 19 rounds, 36 answers, Hall, final messages and',ex.photos.length,'photo files recoverable.');

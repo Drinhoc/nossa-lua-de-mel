@@ -44,3 +44,10 @@ next-env.d.ts
 /.codex/
 /outputs/
 /work/
+
+# Dados pessoais: nunca versionar backups, cápsulas exportadas, fotos, links/tokens
+.dev.vars*
+*.zip
+/nossa-capsula*/
+/capsula*/
+*token*.txt

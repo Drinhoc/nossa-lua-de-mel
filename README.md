@@ -28,6 +28,24 @@ A hospedagem do Sites começa restrita ao proprietário e exige login da platafo
 - Cápsula com fotos, respostas, escolhas e filtros por cidade / Hall da Fama.
 - Rascunhos locais; respostas finais sempre no servidor.
 
+## Guardar a cápsula (backup)
+
+Ao final da experiência aparece **Baixar nossa cápsula** (tela final e dentro da Nossa Cápsula). O navegador monta `nossa-capsula-AAAA-MM-DD.zip`:
+
+```
+nossa-capsula/
+  README.txt     como abrir
+  memorias.txt   todas as respostas, revelações, Hall da Fama, escolhas e mensagens finais em texto
+  capsule.json   dados estruturados (exportVersion 1): sala, playlist usada, 19 rodadas, respostas, decisões, horários de revelação, inventário das fotos
+  photos/        os arquivos JPEG originais guardados no R2
+```
+
+- `GET /api/export` exige o token pessoal (`Authorization: Bearer`). A sala vem só do token; não há parâmetro de sala.
+- O export usa a mesma regra de visibilidade da sessão (`visibleAnswers` em `lib/server.ts`): antes da revelação, a resposta do parceiro não sai. Concluída a experiência, o export é completo (`scope: "complete"`).
+- As fotos são baixadas uma a uma por `/api/photo?id=` (autenticado) e empacotadas no aparelho.
+- Sem a interface: `node --experimental-strip-types scripts/export-capsule.mjs "<link pessoal>" pasta-destino` grava a pasta e o ZIP (requer o site acessível sem login da plataforma).
+- `node --experimental-strip-types tests/export.mjs`: segredo antes da revelação, isolamento entre salas, fotos byte a byte e ZIP íntegro.
+
 ## Conteúdo
 
 Edite `lib/rounds.ts`. A ordem está em `makePlaylist()` e é gravada por sessão. `sliceIds` mantém o caminho mínimo. Preserve IDs usados em sessões existentes. Alterações de texto também afetam essas sessões.
@@ -57,6 +75,7 @@ O Sites provisiona os recursos remotos e aplica migrações no deploy. Não vers
 
 ## Limites de hoje
 
+- Não há data de conclusão gravada no banco; o export traz `lastRevealedAt`.
 - Sem PDF, impressão, fotolivro, analytics ou placar.
 - Fotos HEIC dependem do navegador; quando não decodifica, use JPEG ou captura de tela.
 - É necessário estar conectado para enviar e avançar; rascunhos de texto permanecem no aparelho durante falhas.
