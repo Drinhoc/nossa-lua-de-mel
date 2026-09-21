@@ -1,0 +1,6 @@
+import { sqliteTable, text, integer, primaryKey, uniqueIndex } from 'drizzle-orm/sqlite-core';
+export const rooms = sqliteTable('rooms', {id:text('id').primaryKey(), pedro:text('pedro').notNull(), mariana:text('mariana').notNull(), playlist:text('playlist').notNull(), position:integer('position').notNull().default(0), created:text('created').notNull()},t=>[uniqueIndex('rooms_pedro_token').on(t.pedro),uniqueIndex('rooms_mariana_token').on(t.mariana)]);
+export const answers = sqliteTable('answers',{room:text('room').notNull().references(()=>rooms.id), round:text('round').notNull(), person:text('person').notNull(), body:text('body').notNull(), photo:text('photo'), city:text('city').notNull()},t=>[primaryKey({columns:[t.room,t.round,t.person]})]);
+export const reveals = sqliteTable('reveals',{room:text('room').notNull().references(()=>rooms.id),round:text('round').notNull(),at:integer('at').notNull(),joint:text('joint'),decision:text('decision')},t=>[primaryKey({columns:[t.room,t.round]})]);
+export const photos = sqliteTable('photos',{id:text('id').primaryKey(),room:text('room').notNull().references(()=>rooms.id),person:text('person').notNull(),round:text('round').notNull(),mime:text('mime').notNull()});
+
