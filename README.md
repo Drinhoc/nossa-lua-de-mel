@@ -20,7 +20,7 @@ A hospedagem do Sites começa restrita ao proprietário e exige login da platafo
 - Caminho reduzido de quatro rodadas para testes e experiência completa de 19 rodadas.
 - Duas cartas sorteadas por sessão, iguais nos dois celulares.
 - D1 para respostas, progresso e escolhas; R2 para fotografias.
-- Sincronização a cada 1,5 segundo enquanto a página está visível.
+- Sincronização serializada: o próximo GET começa 1,5 segundo depois do término do anterior, enquanto a página está visível. Ações do usuário têm precedência sobre snapshots antigos.
 - Revelação controlada no servidor: a resposta do parceiro não entra na API antes da hora.
 - Contagem 3–2–1, edição antes da revelação, cronômetro opcional de 90 segundos sem bloqueio.
 - Fotos reduzidas no aparelho para até 2.000 pixels e convertidas a JPEG sem metadados EXIF. Limite de upload: 5 MB.
@@ -30,7 +30,7 @@ A hospedagem do Sites começa restrita ao proprietário e exige login da platafo
 
 ## Guardar a cápsula (backup)
 
-Ao final da experiência aparece **Baixar nossa cápsula** (tela final e dentro da Nossa Cápsula). O navegador monta `nossa-capsula-AAAA-MM-DD.zip`:
+Durante a experiência, a Nossa Cápsula oferece **Baixar backup até aqui**, somente com memórias reveladas e as próprias respostas de quem exporta (`scope: partial`). Ao final aparece **Baixar nossa cápsula** (tela final e dentro da Nossa Cápsula). O navegador monta `nossa-capsula-AAAA-MM-DD.zip`:
 
 ```
 nossa-capsula/
@@ -46,6 +46,16 @@ nossa-capsula/
 - Sem a interface: `node --experimental-strip-types scripts/export-capsule.mjs "<link pessoal>" pasta-destino` grava a pasta e o ZIP (requer o site acessível sem login da plataforma).
 - `node --experimental-strip-types tests/export.mjs`: segredo antes da revelação, isolamento entre salas, fotos byte a byte e ZIP íntegro.
 
+## Recuperar o link e lidar com falhas de rede
+
+Dentro de **Guardar meu link para voltar depois**, use **Pedro/Mariana perdeu o link?**. Após confirmação, aparece o novo link completo do parceiro com botão de copiar. O link anterior dessa pessoa é invalidado. O token de quem recupera, sala, playlist, posição, respostas, revelações, decisões e fotos permanecem intactos. A sala e o parceiro são derivados exclusivamente do token autenticado.
+
+Um 401 mantém o token no aparelho e orienta pedir um novo link ao parceiro. Falhas de rede mostram mensagem e tentativa manual, além de recuperação automática sem F5. Voltar à aba ou recuperar a conexão dispara uma sincronização. Um POST com timeout não é repetido automaticamente: pode já ter sido confirmado no servidor; o polling reconcilia o estado.
+
+Limites de espera: sessão/export 20 s; carregar/baixar foto 30 s; upload 60 s; backup no navegador 180 s no total. Os limites cobrem também o corpo das respostas HTTP. Uma foto ausente no D1/R2 interrompe o backup com erro, em vez de produzir silenciosamente uma cápsula incompleta.
+
+Fotos enviadas e trocadas antes de salvar podem ficar sem referência em respostas. **Não há limpeza automática**: uma foto ainda pode pertencer a um rascunho em outro aparelho. Neste MVP, preservar os dados existentes tem prioridade. Nenhuma alteração de schema ou migração é necessária para esta auditoria.
+
 ## Conteúdo
 
 Edite `lib/rounds.ts`. A ordem está em `makePlaylist()` e é gravada por sessão. `sliceIds` mantém o caminho mínimo. Preserve IDs usados em sessões existentes. Alterações de texto também afetam essas sessões.
@@ -60,9 +70,11 @@ Node 22.13+. Instale com `npm ci`. Se o launcher npm do Windows falhar, use `nod
 - `node node_modules/typescript/bin/tsc --noEmit`: TypeScript.
 - `node scripts/run-framework.mjs build`: build Worker + cliente.
 - `node tests/integration.mjs`: caminho mínimo, isolamento, fotos e revelação.
-- `node tests/full-journey.mjs`: jornada completa.
+- `node tests/full-journey.mjs`: jornada completa e export completo.
+- `node --experimental-strip-types --test tests/network.mjs`: API lenta, serialização, recuperação, precedência de POST e timeout.
+- `node tests/relink.mjs`: recuperação após rodadas, foto, Hall e resposta ainda secreta.
 
-Os testes usam `http://localhost:5173`; `TEST_ORIGIN` permite outro servidor local. Cada execução cria sessões de teste independentes.
+Os testes usam `http://localhost:5173`; `TEST_ORIGIN` permite outro servidor local. Os testes recusam endereços que não sejam loopback para impedir escrita acidental em produção. Cada execução cria sessões de teste independentes.
 
 Gere migrações com `node node_modules/drizzle-kit/bin.cjs generate`. Após o primeiro build, aplique cada migração local uma única vez:
 

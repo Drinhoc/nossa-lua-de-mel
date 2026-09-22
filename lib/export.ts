@@ -1,6 +1,6 @@
 import { database, bucket } from '@/lib/storage';
 import { roundById, type Person } from '@/lib/rounds';
-import { authenticate, visibleAnswers } from '@/lib/server';
+import { authenticate, visibleAnswers, AppError } from '@/lib/server';
 import { EXPORT_VERSION, type CapsuleExport, type CapsulePhoto, type CapsuleRound } from '@/lib/capsule';
 
 type AnswerRow = { room: string; round: string; person: Person; body: string; photo: string | null; city: string };
@@ -26,10 +26,11 @@ export async function buildExport(req: Request): Promise<CapsuleExport> {
   const photoFile = new Map<string, string>();
   for (const a of visible) {
     if (!a.photo || photoFile.has(a.photo)) continue;
-    const row = photoRows.find(p => p.id === a.photo); if (!row) continue;
+    const row = photoRows.find(p => p.id === a.photo); if (!row) throw new AppError('Uma foto está sem registro. O backup não foi concluído; suas memórias foram preservadas.',503);
     const order = playlist.indexOf(a.round) + 1;
     const file = `photos/${String(order).padStart(2, '0')}-${a.round}-${a.person.toLowerCase()}.jpg`;
     const head = await bucket().head(row.id);
+    if (!head) throw new AppError('Uma foto não está disponível no armazenamento. O backup não foi concluído; tente novamente.',503);
     photoFile.set(row.id, file);
     photos.push({ id: row.id, round: row.round, person: row.person, mime: row.mime, bytes: head?.size ?? null, uploadedAt: head?.uploaded ? head.uploaded.toISOString() : null, file, download: `/api/photo?id=${row.id}` });
   }

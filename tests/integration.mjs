@@ -1,3 +1,4 @@
+import './local-only.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const origin=process.env.TEST_ORIGIN||'http://localhost:5173';

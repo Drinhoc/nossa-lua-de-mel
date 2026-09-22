@@ -14,7 +14,7 @@ return json({token:b.person==='Pedro'?p:m,invite:b.person==='Pedro'?m:p});}
 // Recupera o acesso do parceiro que perdeu o link: gera um token novo e troca SÓ o hash dele. Sala, respostas, fotos e posição ficam intactas; o link antigo dele deixa de funcionar.
 if(b.action==='relink'){const auth=await authenticate(req);const target=auth.person==='Pedro'?'mariana':'pedro';const mine=auth.person==='Pedro'?'pedro':'mariana';const fresh=token();
 const result=await db.prepare(`UPDATE rooms SET ${target}=? WHERE id=? AND ${mine}=?`).bind(await digest(fresh),auth.room.id,auth.person==='Pedro'?auth.room.pedro:auth.room.mariana).run();if(result.meta.changes!==1)throw new AppError('Não foi possível recriar o link.',409);
-console.log('relink',auth.room.id,'by',auth.person);return json({invite:fresh,for:auth.person==='Pedro'?'Mariana':'Pedro'});}
+return json({invite:fresh,for:auth.person==='Pedro'?'Mariana':'Pedro'});}
 const {room,person,round}=await current(req,b.round);
 if(b.action==='answer'){
 const body=typeof b.body==='string'?b.body.trim():'';if(body.length>3000)throw new AppError('Use até 3.000 caracteres.');

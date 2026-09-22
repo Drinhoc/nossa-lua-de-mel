@@ -1,3 +1,4 @@
+import './local-only.mjs';
 // Export / backup da Nossa Cápsula: segredo pré-revelação, isolamento entre salas, fotos e backup completo.
 // Uso: node --experimental-strip-types tests/export.mjs  (servidor local em TEST_ORIGIN ou http://localhost:5173)
 import assert from 'node:assert/strict';
