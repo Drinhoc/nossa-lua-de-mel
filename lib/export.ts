@@ -2,6 +2,7 @@ import { database, bucket } from '@/lib/storage';
 import { roundById, type Person } from '@/lib/rounds';
 import { authenticate, visibleAnswers, AppError } from '@/lib/server';
 import { EXPORT_VERSION, type CapsuleExport, type CapsulePhoto, type CapsuleRound } from '@/lib/capsule';
+import { isBonus } from '@/lib/bonus';
 
 type AnswerRow = { room: string; round: string; person: Person; body: string; photo: string | null; city: string };
 type RevealRow = { room: string; round: string; at: number; joint: string | null; decision: 'joint' | 'both' | null };
@@ -19,7 +20,7 @@ export async function buildExport(req: Request): Promise<CapsuleExport> {
   const photoRows = (await db.prepare('SELECT * FROM photos WHERE room=?').bind(room.id).all<PhotoRow>()).results;
   const now = Date.now();
   const visible = visibleAnswers(all, revs, person, now);
-  const revealed = revs.filter(r => Number(r.at) <= now);
+  const revealed = revs.filter(r => Number(r.at) <= now && playlist.includes(r.round));
   const complete = room.position >= playlist.length;
 
   const photos: CapsulePhoto[] = [];
@@ -28,7 +29,7 @@ export async function buildExport(req: Request): Promise<CapsuleExport> {
     if (!a.photo || photoFile.has(a.photo)) continue;
     const row = photoRows.find(p => p.id === a.photo); if (!row) throw new AppError('Uma foto está sem registro. O backup não foi concluído; suas memórias foram preservadas.',503);
     const order = playlist.indexOf(a.round) + 1;
-    const file = `photos/${String(order).padStart(2, '0')}-${a.round}-${a.person.toLowerCase()}.jpg`;
+    const file = `photos/${isBonus(a.round) ? '20' : String(order).padStart(2, '0')}-${a.round}-${a.person.toLowerCase()}.jpg`;
     const head = await bucket().head(row.id);
     if (!head) throw new AppError('Uma foto não está disponível no armazenamento. O backup não foi concluído; tente novamente.',503);
     photoFile.set(row.id, file);
@@ -59,6 +60,7 @@ export async function buildExport(req: Request): Promise<CapsuleExport> {
     finalMessages: byType('final').map(r => ({ round: r.id, title: r.title, Pedro: r.answers.Pedro?.body ?? null, Mariana: r.answers.Mariana?.body ?? null })),
     jointMemories: byType('joint').map(r => ({ round: r.id, title: r.title, text: r.joint?.text ?? null })),
     photos,
-    counts: { answers: visible.length, revealedRounds: revealed.length, photos: photos.length },
+    extras: complete ? visible.filter(a=>isBonus(a.round)).map(a=>({id:a.round,person:a.person,body:a.body,city:a.city,photo:a.photo&&photoFile.has(a.photo)?{id:a.photo,file:photoFile.get(a.photo)!}:null,createdAt:iso(revs.find(r=>r.round===a.round)?.at)})).sort((a,b)=>(a.createdAt||'').localeCompare(b.createdAt||'')||a.id.localeCompare(b.id)) : [],
+    counts: { answers: visible.filter(a=>playlist.includes(a.round)).length, revealedRounds: revealed.length, photos: photos.length },
   };
 }

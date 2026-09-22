@@ -88,13 +88,23 @@ O Sites provisiona os recursos remotos e aplica migrações no deploy. Não vers
 ## Limites de hoje
 
 - Não há data de conclusão gravada no banco; o export traz `lastRevealedAt`.
-- Sem PDF, impressão, fotolivro, analytics ou placar.
+- PDF pela função de impressão do álbum offline; sem serviço externo de impressão, analytics ou placar.
 - Fotos HEIC dependem do navegador; quando não decodifica, use JPEG ou captura de tela.
 - É necessário estar conectado para enviar e avançar; rascunhos de texto permanecem no aparelho durante falhas.
 - Abrir o link da outra pessoa no mesmo navegador muda a identidade persistida. Use aparelhos ou perfis distintos para uso simultâneo.
 - Sem recuperação por e-mail: guarde os links antes de limpar dados do navegador.
 
-## Fotografia da capa
+## Álbum e capítulo 20
+
+Ao concluir a playlist, a tela final abre a capa do álbum com uma fotografia real da sessão. A leitura tem páginas para a viagem, Hall da Fama, cartas finais e extras, com navegação por botões/setas e modo apresentação na mesma aba. O ZIP também inclui `album.html`, com imagens relativas à pasta `photos/`: extraia o ZIP inteiro antes de abrir. O álbum funciona sem rede e oferece impressão/PDF pelo navegador; não contém tokens e escapa todo texto do usuário.
+
+O capítulo 20 é um epílogo opcional, disponível somente após concluir a playlist original. Até 24 lembranças por participante, com texto e/ou fotografia; aceita seleção múltipla e legendas individuais. Rascunhos ficam no aparelho, e a publicação explícita torna cada lembrança visível ao casal. Em falhas parciais, os itens já salvos são mantidos e só os pendentes continuam no formulário.
+
+Não modifica a playlist, a posição ou as respostas originais e não precisa de migração. Reutiliza `answers`, `reveals` e `photos` com IDs `album-{person}-{uuid}` separados das rodadas. A sessão normal filtra pela playlist; o export inclui os extras em campo aditivo `extras` e os arquivos de foto no ZIP. A gravação de resposta e revelação é atômica em D1; o ID do rascunho torna tentativas repetidas idempotentes. Autorização de sala, pessoa, conclusão e propriedade da foto é sempre verificada no servidor. Fotos de rascunhos continuam privadas até a publicação. Não há limpeza de fotos órfãs.
+
+Teste: `node --experimental-strip-types tests/album.mjs` (somente loopback). Cobre conclusão obrigatória, isolamento entre salas, privacidade antes de publicar, preservação da sessão, limites, repetição sem duplicatas, HTML seguro e fotos no ZIP.
+
+### Crédito da capa inicial
 
 Perito Moreno Glacier, Fernando, 2023. Wikimedia Commons, CC BY-SA 4.0. Recorte responsivo na interface.
 
