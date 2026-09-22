@@ -1,7 +1,7 @@
 import { actionSchema } from '@/lib/validation';
 import { database } from '@/lib/storage';
 import { makePlaylist, sliceIds } from '@/lib/rounds';
-import { AppError,token,digest,json,failure,snapshot,current } from '@/lib/server';
+import { AppError,token,digest,json,failure,snapshot,current,authenticate } from '@/lib/server';
 export async function GET(req:Request){try{return json(await snapshot(req))}catch(e){return failure(e)}}
 export async function POST(req:Request){try{
 if(Number(req.headers.get('content-length')||0)>20000)throw new AppError('Resposta muito longa.');
@@ -11,6 +11,10 @@ if(!b.person)throw new AppError('Escolha Pedro ou Mariana.');
 const p=token(),m=token(),id=crypto.randomUUID();const playlist=b.mode==='slice'?sliceIds:makePlaylist();
 await db.prepare('INSERT INTO rooms(id,pedro,mariana,playlist,position,created) VALUES(?,?,?,?,0,?)').bind(id,await digest(p),await digest(m),JSON.stringify(playlist),new Date().toISOString()).run();
 return json({token:b.person==='Pedro'?p:m,invite:b.person==='Pedro'?m:p});}
+// Recupera o acesso do parceiro que perdeu o link: gera um token novo e troca SÓ o hash dele. Sala, respostas, fotos e posição ficam intactas; o link antigo dele deixa de funcionar.
+if(b.action==='relink'){const auth=await authenticate(req);const target=auth.person==='Pedro'?'mariana':'pedro';const mine=auth.person==='Pedro'?'pedro':'mariana';const fresh=token();
+const result=await db.prepare(`UPDATE rooms SET ${target}=? WHERE id=? AND ${mine}=?`).bind(await digest(fresh),auth.room.id,auth.person==='Pedro'?auth.room.pedro:auth.room.mariana).run();if(result.meta.changes!==1)throw new AppError('Não foi possível recriar o link.',409);
+console.log('relink',auth.room.id,'by',auth.person);return json({invite:fresh,for:auth.person==='Pedro'?'Mariana':'Pedro'});}
 const {room,person,round}=await current(req,b.round);
 if(b.action==='answer'){
 const body=typeof b.body==='string'?b.body.trim():'';if(body.length>3000)throw new AppError('Use até 3.000 caracteres.');
